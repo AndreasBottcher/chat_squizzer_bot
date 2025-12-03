@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from openai import OpenAI
 
-from config import BOT_TOKEN, DATETIME_FORMAT, OPENAI_API_KEY, logger
+from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, OPENAI_API_KEY, logger
 from db import (
     init_db,
     add_message,
@@ -39,7 +39,7 @@ async def summarize_with_openai(messages: List[tuple]) -> str:
     # Format messages for summarization
     formatted_messages = []
     for timestamp, username, text in messages:
-        time_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        time_str = timestamp.strftime(DATETIME_FORMAT)
         formatted_messages.append(f"[{time_str}] {username}: {text}")
 
     messages_text = "\n".join(formatted_messages)
@@ -88,13 +88,13 @@ def summarize_basic(messages: List[tuple]) -> str:
     summary += f"• Active users: {unique_users}\n"
 
     if most_active_hour:
-        summary += f"• Most active hour: {most_active_hour.strftime('%Y-%m-%d %H:%M')}\n"
+        summary += f"• Most active hour: {most_active_hour.strftime(DATETIME_FORMAT_SHORT)}\n"
 
     # Show sample of recent messages
     summary += f"\n📝 Recent messages:\n"
     recent_messages = messages[-10:]  # Last 10 messages
     for timestamp, username, text in recent_messages:
-        time_str = timestamp.strftime("%H:%M")
+        time_str = timestamp.strftime(TIME_FORMAT)
         preview = text[:50] + "..." if len(text) > 50 else text
         summary += f"  [{time_str}] {username}: {preview}\n"
 

@@ -14,6 +14,8 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', logging.INFO)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 DATETIME_FORMAT = os.getenv('DATETIME_FORMAT', '%d.%m.%Y %H:%M:%S')
+DATETIME_FORMAT_SHORT = os.getenv('DATETIME_FORMAT_SHORT', '%d.%m.%Y %H:%M')
+TIME_FORMAT = os.getenv('TIME_FORMAT', '%H:%M')
 
 # Configure logging
 logging.basicConfig(
