@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from openai import OpenAI
 
-from config import BOT_TOKEN, OPENAI_API_KEY, logger
+from config import BOT_TOKEN, DATETIME_FORMAT, OPENAI_API_KEY, logger
 from db import (
     init_db,
     add_message,
@@ -173,8 +173,8 @@ async def cmd_stats(message: Message):
         f"📈 Statistics for last 24 hours:\n\n"
         f"• Total messages: {len(messages)}\n"
         f"• Unique users: {unique_users}\n"
-        f"• Oldest message: {oldest_message.strftime('%Y-%m-%d %H:%M:%S')}\n"
-        f"• Newest message: {newest_message.strftime('%Y-%m-%d %H:%M:%S')}"
+        f"• Oldest message: {oldest_message.strftime(DATETIME_FORMAT)}\n"
+        f"• Newest message: {newest_message.strftime(DATETIME_FORMAT)}"
     )
 
     await message.answer(stats)
