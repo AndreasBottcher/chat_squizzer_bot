@@ -13,8 +13,7 @@ from db import (
     add_message,
     get_messages_last_24h,
     clean_old_messages,
-    clear_chat_messages,
-    get_message_count
+    clear_chat_messages
 )
 
 # Initialize bot and dispatcher
@@ -92,9 +91,6 @@ async def cmd_summary(message: Message):
     """Handle /summary command"""
     chat_id = message.chat.id
 
-    # Clean old messages first
-    await clean_old_messages()
-
     # Get messages from last 24 hours
     messages = await get_messages_last_24h(chat_id)
 
@@ -113,7 +109,6 @@ async def cmd_summary(message: Message):
 async def cmd_stats(message: Message):
     """Handle /stats command"""
     chat_id = message.chat.id
-    await clean_old_messages()
 
     messages = await get_messages_last_24h(chat_id)
 
@@ -170,11 +165,6 @@ async def handle_message(message: Message):
 
     # Store message in database
     await add_message(chat_id, username, text, timestamp)
-
-    # Periodically clean old messages (every 100 messages)
-    message_count = await get_message_count(chat_id)
-    if message_count > 0 and message_count % 100 == 0:
-        await clean_old_messages()
 
     logger.debug(f"Stored message from {username} in chat {chat_id}")
 
