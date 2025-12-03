@@ -7,11 +7,11 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, TOP_USERS_COUNT, logger
+from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, TOP_USERS_COUNT, SUMMARY_PERIOD_HOURS, logger
 from db import (
     init_db,
     add_message,
-    get_messages_last_24h,
+    get_messages_period,
     clean_old_messages,
     clear_chat_messages
 )
@@ -21,10 +21,11 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 
-def summarize_basic(messages: List[tuple]) -> str:
+def summarize_basic(messages: List[tuple], period_hours: int) -> str:
     """Basic summarization without OpenAI API"""
     if not messages:
-        return "No messages found in the last 24 hours."
+        period_text = f"{period_hours} hours" if period_hours != 24 else "24 hours"
+        return f"No messages found in the last {period_text}."
 
     total_messages = len(messages)
     unique_users = len(set(msg[1] for msg in messages))
@@ -46,7 +47,8 @@ def summarize_basic(messages: List[tuple]) -> str:
     # Get most active hour
     most_active_hour = max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else None
 
-    summary = f"📊 Summary of last 24 hours:\n\n"
+    period_text = f"{period_hours} hours" if period_hours != 24 else "24 hours"
+    summary = f"📊 Summary of last {period_text}:\n\n"
     summary += f"• Total messages: {total_messages}\n"
     summary += f"• Active users: {unique_users}\n"
 
@@ -65,10 +67,11 @@ def summarize_basic(messages: List[tuple]) -> str:
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     """Handle /start command"""
+    period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
     await message.answer(
         "👋 Hello! I'm a message summarizer bot.\n\n"
         "I collect messages in this chat and can summarize them.\n"
-        "Use /summary to get a summary of messages from the last 24 hours.\n"
+        f"Use /summary to get a summary of messages from the last {period_text}.\n"
         "Use /help for more information."
     )
 
@@ -76,10 +79,11 @@ async def cmd_start(message: Message):
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     """Handle /help command"""
+    period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
     await message.answer(
         "📖 Bot Commands:\n\n"
         "/start - Start the bot\n"
-        "/summary - Get a summary of messages from the last 24 hours\n"
+        f"/summary - Get a summary of messages from the last {period_text}\n"
         "/stats - Show statistics about stored messages\n"
         "/clear - Clear stored messages (admin only)\n\n"
         "The bot automatically collects messages in groups/channels where it's added."
@@ -91,15 +95,16 @@ async def cmd_summary(message: Message):
     """Handle /summary command"""
     chat_id = message.chat.id
 
-    # Get messages from last 24 hours
-    messages = await get_messages_last_24h(chat_id)
+    # Get messages from configured period
+    messages = await get_messages_period(chat_id, SUMMARY_PERIOD_HOURS)
 
     if not messages:
-        await message.answer("No messages found in the last 24 hours.")
+        period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
+        await message.answer(f"No messages found in the last {period_text}.")
         return
 
     # Generate summary
-    summary = summarize_basic(messages)
+    summary = summarize_basic(messages, SUMMARY_PERIOD_HOURS)
 
     # Send summary
     await message.answer(summary)
@@ -110,7 +115,7 @@ async def cmd_stats(message: Message):
     """Handle /stats command"""
     chat_id = message.chat.id
 
-    messages = await get_messages_last_24h(chat_id)
+    messages = await get_messages_period(chat_id, SUMMARY_PERIOD_HOURS)
 
     if not messages:
         await message.answer("No messages stored for this chat.")
@@ -120,8 +125,9 @@ async def cmd_stats(message: Message):
     oldest_message = min(msg[0] for msg in messages)
     newest_message = max(msg[0] for msg in messages)
 
+    period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
     stats = (
-        f"📈 Statistics for last 24 hours:\n\n"
+        f"📈 Statistics for last {period_text}:\n\n"
         f"• Total messages: {len(messages)}\n"
         f"• Unique users: {unique_users}\n"
         f"• Oldest message: {oldest_message.strftime(DATETIME_FORMAT)}\n"
@@ -173,7 +179,7 @@ async def periodic_cleanup():
     """Periodically clean old messages"""
     while True:
         await asyncio.sleep(3600)  # Run every hour
-        await clean_old_messages()
+        await clean_old_messages(SUMMARY_PERIOD_HOURS)
         logger.info("Periodic cleanup completed")
 
 

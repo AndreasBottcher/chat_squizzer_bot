@@ -42,9 +42,9 @@ async def add_message(chat_id: int, username: str, text: str, timestamp: Optiona
         await db.commit()
 
 
-async def get_messages_last_24h(chat_id: int) -> List[Tuple[datetime, str, str]]:
-    """Get all messages from the last 24 hours for a chat"""
-    cutoff_time = datetime.now() - timedelta(hours=24)
+async def get_messages_period(chat_id: int, hours: int) -> List[Tuple[datetime, str, str]]:
+    """Get all messages from the last N hours for a chat"""
+    cutoff_time = datetime.now() - timedelta(hours=hours)
 
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -59,9 +59,9 @@ async def get_messages_last_24h(chat_id: int) -> List[Tuple[datetime, str, str]]
             ]
 
 
-async def clean_old_messages():
-    """Remove messages older than 24 hours from storage"""
-    cutoff_time = datetime.now() - timedelta(hours=24)
+async def clean_old_messages(hours: int):
+    """Remove messages older than N hours from storage"""
+    cutoff_time = datetime.now() - timedelta(hours=hours)
 
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
@@ -87,9 +87,9 @@ async def clear_chat_messages(chat_id: int):
         return deleted_count
 
 
-async def get_message_count(chat_id: int) -> int:
-    """Get the count of messages for a chat in the last 24 hours"""
-    cutoff_time = datetime.now() - timedelta(hours=24)
+async def get_message_count(chat_id: int, hours: int) -> int:
+    """Get the count of messages for a chat in the last N hours"""
+    cutoff_time = datetime.now() - timedelta(hours=hours)
 
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
