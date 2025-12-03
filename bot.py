@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from openai import OpenAI
 
-from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, OPENAI_API_KEY, logger
+from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, TOP_USERS_COUNT, OPENAI_API_KEY, logger
 from db import (
     init_db,
     add_message,
@@ -74,6 +74,14 @@ def summarize_basic(messages: List[tuple]) -> str:
     total_messages = len(messages)
     unique_users = len(set(msg[1] for msg in messages))
 
+    # Count messages per user
+    user_counts = defaultdict(int)
+    for _, username, _ in messages:
+        user_counts[username] += 1
+
+    # Get top N most active users
+    top_users = sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:TOP_USERS_COUNT]
+
     # Group messages by hour
     hourly_counts = defaultdict(int)
     for timestamp, _, _ in messages:
@@ -87,8 +95,14 @@ def summarize_basic(messages: List[tuple]) -> str:
     summary += f"• Total messages: {total_messages}\n"
     summary += f"• Active users: {unique_users}\n"
 
+    # Add top N most active users
+    if top_users:
+        summary += f"\n👥 Top {TOP_USERS_COUNT} most active users:\n"
+        for i, (username, count) in enumerate(top_users, 1):
+            summary += f"  {i}. {username}: {count} messages\n"
+
     if most_active_hour:
-        summary += f"• Most active hour: {most_active_hour.strftime(DATETIME_FORMAT_SHORT)}\n"
+        summary += f"\n• Most active hour: {most_active_hour.strftime(DATETIME_FORMAT_SHORT)}\n"
 
     # Show sample of recent messages
     summary += f"\n📝 Recent messages:\n"
