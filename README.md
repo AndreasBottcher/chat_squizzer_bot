@@ -7,7 +7,6 @@ A Telegram bot built with Python and aiogram that collects messages and provides
 - 📝 Automatically collects messages from chats where the bot is added
 - ⏰ Tracks messages from the last 24 hours
 - 📊 Provides summaries with statistics
-- 🤖 Optional OpenAI integration for intelligent summarization
 - 🧹 Automatic cleanup of old messages
 - 📈 Statistics command to view message metrics
 
@@ -15,7 +14,6 @@ A Telegram bot built with Python and aiogram that collects messages and provides
 
 - Python 3.13 or higher
 - A Telegram bot token (get it from [@BotFather](https://t.me/BotFather))
-- (Optional) OpenAI API key for advanced summarization
 
 ## Installation
 
@@ -23,17 +21,15 @@ A Telegram bot built with Python and aiogram that collects messages and provides
 
 2. Install dependencies:
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 3. Create a `.env` file in the project root:
 ```bash
 BOT_TOKEN=your_telegram_bot_token_here
-OPENAI_API_KEY=your_openai_api_key_here_optional
 ```
 
    - `BOT_TOKEN` is required - get it from [@BotFather](https://t.me/BotFather)
-   - `OPENAI_API_KEY` is optional - if not provided, the bot will use basic summarization
 
 ## Usage
 
@@ -53,16 +49,14 @@ python bot.py
 
 ## How It Works
 
-- The bot stores messages in memory with timestamps
+- The bot stores messages in SQLite database with timestamps
 - Messages older than 24 hours are automatically cleaned up
 - When you request a summary, it collects all messages from the last 24 hours
-- If OpenAI API is configured, it uses GPT-3.5-turbo for intelligent summarization
-- Otherwise, it provides a basic summary with statistics and recent messages
+- It provides a summary with statistics including total messages, active users, top most active users, and most active hour
 
 ## Notes
 
-- Messages are stored in memory, so they will be lost when the bot restarts
-- For production use, consider adding a database (SQLite, PostgreSQL, etc.)
+- Messages are stored in SQLite database (`messages.db`), so they persist across bot restarts
 - The bot needs to be added to groups/channels to collect messages
 - Make sure the bot has permission to read messages in groups
 

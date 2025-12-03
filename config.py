@@ -11,7 +11,6 @@ if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN environment variable is required")
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', logging.INFO)
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 DATETIME_FORMAT = os.getenv('DATETIME_FORMAT', '%d.%m.%Y %H:%M:%S')
 DATETIME_FORMAT_SHORT = os.getenv('DATETIME_FORMAT_SHORT', '%d.%m.%Y %H:%M')

@@ -6,9 +6,8 @@ from typing import List
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
-from openai import OpenAI
 
-from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, TOP_USERS_COUNT, OPENAI_API_KEY, logger
+from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, TOP_USERS_COUNT, logger
 from db import (
     init_db,
     add_message,
@@ -21,49 +20,6 @@ from db import (
 # Initialize bot and dispatcher
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-
-# OpenAI client (optional, for better summarization)
-openai_client = None
-if OPENAI_API_KEY:
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
-    logger.info("OpenAI API initialized")
-else:
-    logger.info("OpenAI API key not provided, using basic summarization")
-
-
-async def summarize_with_openai(messages: List[tuple]) -> str:
-    """Summarize messages using OpenAI API"""
-    if not openai_client or not messages:
-        return "No messages to summarize."
-
-    # Format messages for summarization
-    formatted_messages = []
-    for timestamp, username, text in messages:
-        time_str = timestamp.strftime(DATETIME_FORMAT)
-        formatted_messages.append(f"[{time_str}] {username}: {text}")
-
-    messages_text = "\n".join(formatted_messages)
-
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful assistant that summarizes chat messages from the last 24 hours. Provide a concise summary highlighting key topics, discussions, and important information."
-                },
-                {
-                    "role": "user",
-                    "content": f"Please summarize the following chat messages:\n\n{messages_text}"
-                }
-            ],
-            max_tokens=500,
-            temperature=0.7
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        logger.error(f"OpenAI API error: {e}")
-        return summarize_basic(messages)
 
 
 def summarize_basic(messages: List[tuple]) -> str:
@@ -99,18 +55,10 @@ def summarize_basic(messages: List[tuple]) -> str:
     if top_users:
         summary += f"\n👥 Top {TOP_USERS_COUNT} most active users:\n"
         for i, (username, count) in enumerate(top_users, 1):
-            summary += f"  {i}. {username}: {count} messages\n"
+            summary += f"  {i}. @{username}: {count} messages\n"
 
     if most_active_hour:
         summary += f"\n• Most active hour: {most_active_hour.strftime(DATETIME_FORMAT_SHORT)}\n"
-
-    # Show sample of recent messages
-    summary += f"\n📝 Recent messages:\n"
-    recent_messages = messages[-10:]  # Last 10 messages
-    for timestamp, username, text in recent_messages:
-        time_str = timestamp.strftime(TIME_FORMAT)
-        preview = text[:50] + "..." if len(text) > 50 else text
-        summary += f"  [{time_str}] {username}: {preview}\n"
 
     return summary
 
@@ -154,17 +102,11 @@ async def cmd_summary(message: Message):
         await message.answer("No messages found in the last 24 hours.")
         return
 
-    # Show processing message
-    processing_msg = await message.answer("⏳ Generating summary...")
-
     # Generate summary
-    if openai_client:
-        summary = await summarize_with_openai(messages)
-    else:
-        summary = summarize_basic(messages)
+    summary = summarize_basic(messages)
 
     # Send summary
-    await processing_msg.edit_text(summary)
+    await message.answer(summary)
 
 
 @dp.message(Command("stats"))
