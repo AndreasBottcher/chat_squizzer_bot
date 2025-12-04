@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -14,9 +15,17 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', logging.INFO)
 
 DATETIME_FORMAT = os.getenv('DATETIME_FORMAT', '%d.%m.%Y %H:%M:%S')
 DATETIME_FORMAT_SHORT = os.getenv('DATETIME_FORMAT_SHORT', '%d.%m.%Y %H:%M')
-TIME_FORMAT = os.getenv('TIME_FORMAT', '%H:%M')
 TOP_USERS_COUNT = int(os.getenv('TOP_USERS_COUNT', '3'))
+TOP_NOUNS_COUNT = int(os.getenv('TOP_NOUNS_COUNT', '5'))
 SUMMARY_PERIOD_HOURS = int(os.getenv('SUMMARY_PERIOD_HOURS', '24'))
+
+# NLTK data directory
+NLTK_DATA_DIR = Path(os.getenv('NLTK_DATA_DIR', 'nltk_data')).resolve()
+NLTK_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# NLTK language (e.g., 'english', 'russian')
+LANGUAGE = os.getenv('NLTK_LANGUAGE', 'english').lower()
+LANGUAGE_CODE = LANGUAGE[0:3]
 
 # Configure logging
 logging.basicConfig(

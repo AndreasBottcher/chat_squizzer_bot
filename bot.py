@@ -1,13 +1,61 @@
 import asyncio
+import re
 from datetime import datetime
 from collections import defaultdict
 from typing import List
+
+import nltk
+from nltk.corpus import stopwords
+from nltk.tag import pos_tag
+from nltk.tokenize import word_tokenize
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TIME_FORMAT, TOP_USERS_COUNT, SUMMARY_PERIOD_HOURS, logger
+from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, LANGUAGE_CODE, TOP_USERS_COUNT, TOP_NOUNS_COUNT, SUMMARY_PERIOD_HOURS, NLTK_DATA_DIR, LANGUAGE, logger
+
+# Set custom NLTK data directory
+nltk.data.path.insert(0, str(NLTK_DATA_DIR))
+
+# Download required NLTK data
+def _download_nltk_data():
+    """Download required NLTK data if not present"""
+    try:
+        nltk.data.find('tokenizers/punkt_tab')
+    except LookupError:
+        logger.info(f"Downloading NLTK punkt tokenizer to {NLTK_DATA_DIR}...")
+        nltk.download('punkt_tab', quiet=True, download_dir=str(NLTK_DATA_DIR))
+
+    try:
+        if LANGUAGE != 'english':
+            nltk.data.find(f'taggers/averaged_perceptron_tagger_{LANGUAGE_CODE}')
+        else:
+            nltk.data.find('taggers/averaged_perceptron_tagger')
+    except LookupError:
+        logger.info(f"Downloading NLTK POS tagger to {NLTK_DATA_DIR}...")
+        if LANGUAGE != 'english':
+            nltk.download(f'averaged_perceptron_tagger_{LANGUAGE_CODE}')
+        else:
+            nltk.download('averaged_perceptron_tagger', quiet=True, download_dir=str(NLTK_DATA_DIR))
+
+    try:
+        nltk.data.find('corpora/stopwords')
+    except LookupError:
+        logger.info(f"Downloading NLTK stopwords to {NLTK_DATA_DIR}...")
+        nltk.download('stopwords', quiet=True, download_dir=str(NLTK_DATA_DIR))
+
+
+# Initialize NLTK data
+_download_nltk_data()
+
+# Load stopwords for the configured language
+try:
+    STOPWORDS = set(stopwords.words(LANGUAGE))
+    logger.info(f"Loaded NLTK stopwords for language: {LANGUAGE}")
+except LookupError as e:
+    logger.error(f"Stopwords for {LANGUAGE} not found in NLTK: {e}")
+    raise ValueError(f"Stopwords for language '{LANGUAGE}' are not available in NLTK. Please install the required NLTK data or use a supported language.")
 from db import (
     init_db,
     add_message,
@@ -19,6 +67,43 @@ from db import (
 # Initialize bot and dispatcher
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+
+def extract_nouns(text: str) -> List[str]:
+    """Extract nouns from text using NLTK"""
+    # Skip media messages
+    if text == "[Media message]":
+        return []
+
+    # Remove URLs and mentions
+    text = re.sub(r'http\S+|www\.\S+', '', text)
+    text = re.sub(r'@\w+', '', text)
+
+    # Use NLTK for POS tagging with configured language
+    tokens = word_tokenize(text.lower(), language=LANGUAGE)
+    tagged = pos_tag(tokens, lang=LANGUAGE[0:3])
+
+    # Extract nouns (NN, NNS, NNP, NNPS)
+    nouns = [
+        word for word, pos in tagged
+        if pos == 'S' and len(word) > 2 and word not in STOPWORDS
+    ]
+
+    return nouns
+
+
+def get_top_nouns(messages: List[tuple]) -> List[tuple]:
+    """Get top N most used nouns from messages"""
+    noun_counts = defaultdict(int)
+
+    for _, _, text in messages:
+        nouns = extract_nouns(text)
+        for noun in nouns:
+            noun_counts[noun] += 1
+
+    # Sort by count and return top N
+    top_nouns = sorted(noun_counts.items(), key=lambda x: x[1], reverse=True)[:TOP_NOUNS_COUNT]
+    return top_nouns
 
 
 def summarize_basic(messages: List[tuple], period_hours: int) -> str:
@@ -47,6 +132,9 @@ def summarize_basic(messages: List[tuple], period_hours: int) -> str:
     # Get most active hour
     most_active_hour = max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else None
 
+    # Get top nouns
+    top_nouns = get_top_nouns(messages)
+
     period_text = f"{period_hours} hours" if period_hours != 24 else "24 hours"
     summary = f"📊 Summary of last {period_text}:\n\n"
     summary += f"• Total messages: {total_messages}\n"
@@ -57,6 +145,12 @@ def summarize_basic(messages: List[tuple], period_hours: int) -> str:
         summary += f"\n👥 Top {TOP_USERS_COUNT} most active users:\n"
         for i, (username, count) in enumerate(top_users, 1):
             summary += f"  {i}. @{username}: {count} messages\n"
+
+    # Add top nouns
+    if top_nouns:
+        summary += f"\n📝 Top {TOP_NOUNS_COUNT} most used nouns:\n"
+        for i, (noun, count) in enumerate(top_nouns, 1):
+            summary += f"  {i}. {noun}: {count} times\n"
 
     if most_active_hour:
         summary += f"\n• Most active hour: {most_active_hour.strftime(DATETIME_FORMAT_SHORT)}\n"

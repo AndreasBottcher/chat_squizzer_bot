@@ -8,4 +8,5 @@ dependencies = [
     "aiogram>=3.22.0",
     "python-dotenv>=1.2.1",
     "aiosqlite>=0.21.0",
+    "nltk>=3.9.2",
 ]
