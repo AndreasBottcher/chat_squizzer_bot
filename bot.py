@@ -4,44 +4,67 @@ from datetime import datetime
 from collections import defaultdict
 from typing import List
 
+import pymorphy3
+
 import nltk
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TOP_USERS_COUNT, TOP_NOUNS_COUNT, SUMMARY_PERIOD_HOURS, NLTK_DATA_DIR, logger
+from config import (
+    BOT_TOKEN,
+    DATETIME_FORMAT,
+    DATETIME_FORMAT_SHORT,
+    TOP_USERS_COUNT,
+    TOP_NOUNS_COUNT,
+    SUMMARY_PERIOD_HOURS,
+    NLTK_DATA_DIR,
+    logger,
+)
+from db import (
+    init_db,
+    add_message,
+    get_messages_period,
+    clean_old_messages,
+    clear_chat_messages,
+)
 
 # Language configuration - Russian only
-LANGUAGE = 'russian'
+LANGUAGE = "russian"
 LANGUAGE_CODE = LANGUAGE[0:3]
 
 # Set custom NLTK data directory
 nltk.data.path.insert(0, str(NLTK_DATA_DIR))
 
+
 # Download required NLTK data
 def _download_nltk_data():
     """Download required NLTK data if not present"""
     try:
-        nltk.data.find('tokenizers/punkt_tab')
+        nltk.data.find("tokenizers/punkt_tab")
     except LookupError:
         logger.info(f"Downloading NLTK punkt tokenizer to {NLTK_DATA_DIR}...")
-        nltk.download('punkt_tab', quiet=True, download_dir=str(NLTK_DATA_DIR))
+        nltk.download("punkt_tab", quiet=True, download_dir=str(NLTK_DATA_DIR))
 
     try:
-        nltk.data.find(f'taggers/averaged_perceptron_tagger_{LANGUAGE_CODE}')
+        nltk.data.find(f"taggers/averaged_perceptron_tagger_{LANGUAGE_CODE}")
     except LookupError:
         logger.info(f"Downloading NLTK POS tagger for {LANGUAGE} to {NLTK_DATA_DIR}...")
-        nltk.download(f'averaged_perceptron_tagger_{LANGUAGE_CODE}', quiet=True, download_dir=str(NLTK_DATA_DIR))
+        nltk.download(
+            f"averaged_perceptron_tagger_{LANGUAGE_CODE}",
+            quiet=True,
+            download_dir=str(NLTK_DATA_DIR),
+        )
 
     try:
-        nltk.data.find('corpora/stopwords')
+        nltk.data.find("corpora/stopwords")
     except LookupError:
         logger.info(f"Downloading NLTK stopwords to {NLTK_DATA_DIR}...")
-        nltk.download('stopwords', quiet=True, download_dir=str(NLTK_DATA_DIR))
+        nltk.download("stopwords", quiet=True, download_dir=str(NLTK_DATA_DIR))
 
 
 # Initialize NLTK data
@@ -53,18 +76,14 @@ try:
     logger.info(f"Loaded NLTK stopwords for language: {LANGUAGE}")
 except LookupError as e:
     logger.error(f"Stopwords for {LANGUAGE} not found in NLTK: {e}")
-    raise ValueError(f"Stopwords for language '{LANGUAGE}' are not available in NLTK. Please install the required NLTK data or use a supported language.")
-from db import (
-    init_db,
-    add_message,
-    get_messages_period,
-    clean_old_messages,
-    clear_chat_messages
-)
+    raise ValueError(
+        f"Stopwords for language '{LANGUAGE}' are not available in NLTK. Please install the required NLTK data or use a supported language."
+    )
 
 # Initialize bot and dispatcher
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+morph = pymorphy3.MorphAnalyzer()
 
 
 def extract_nouns(text: str) -> List[str]:
@@ -74,17 +93,18 @@ def extract_nouns(text: str) -> List[str]:
         return []
 
     # Remove URLs and mentions
-    text = re.sub(r'http\S+|www\.\S+', '', text)
-    text = re.sub(r'@\w+', '', text)
+    text = re.sub(r"http\S+|www\.\S+", "", text)
+    text = re.sub(r"@\w+", "", text)
 
     # Use NLTK for POS tagging with configured language
     tokens = word_tokenize(text.lower(), language=LANGUAGE)
     tagged = pos_tag(tokens, lang=LANGUAGE[0:3])
 
-    # Extract nouns (NN, NNS, NNP, NNPS)
+    # Extract nouns
     nouns = [
-        word for word, pos in tagged
-        if pos == 'S' and len(word) > 2 and word not in STOPWORDS
+        morph.parse(word)[0].normal_form
+        for word, pos in tagged
+        if pos == "S" and len(word) > 2 and word not in STOPWORDS
     ]
 
     return nouns
@@ -100,7 +120,9 @@ def get_top_nouns(messages: List[tuple]) -> List[tuple]:
             noun_counts[noun] += 1
 
     # Sort by count and return top N
-    top_nouns = sorted(noun_counts.items(), key=lambda x: x[1], reverse=True)[:TOP_NOUNS_COUNT]
+    top_nouns = sorted(noun_counts.items(), key=lambda x: x[1], reverse=True)[
+        :TOP_NOUNS_COUNT
+    ]
     return top_nouns
 
 
@@ -118,7 +140,9 @@ def summarize_basic(messages: List[tuple], period_hours: int) -> str:
         user_counts[username] += 1
 
     # Get top N most active users
-    top_users = sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:TOP_USERS_COUNT]
+    top_users = sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[
+        :TOP_USERS_COUNT
+    ]
 
     # Group messages by hour
     hourly_counts = defaultdict(int)
@@ -127,7 +151,9 @@ def summarize_basic(messages: List[tuple], period_hours: int) -> str:
         hourly_counts[hour] += 1
 
     # Get most active hour
-    most_active_hour = max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else None
+    most_active_hour = (
+        max(hourly_counts.items(), key=lambda x: x[1])[0] if hourly_counts else None
+    )
 
     # Get top nouns
     top_nouns = get_top_nouns(messages)
@@ -187,7 +213,9 @@ async def cmd_summary(message: Message):
     messages = await get_messages_period(chat_id, SUMMARY_PERIOD_HOURS)
 
     if not messages:
-        await message.answer(f"Сообщений за последние {SUMMARY_PERIOD_HOURS}ч не найдено.")
+        await message.answer(
+            f"Сообщений за последние {SUMMARY_PERIOD_HOURS}ч не найдено."
+        )
         return
 
     # Generate summary
@@ -229,9 +257,9 @@ async def cmd_clear(message: Message):
     chat_id = message.chat.id
 
     # Check if user is admin (basic check)
-    if message.chat.type in ['group', 'supergroup']:
+    if message.chat.type in ["group", "supergroup"]:
         member = await bot.get_chat_member(chat_id, message.from_user.id)
-        if member.status not in ['administrator', 'creator']:
+        if member.status not in ["administrator", "creator"]:
             await message.answer("❌ Только администраторы могут очищать сообщения.")
             return
 
@@ -243,7 +271,7 @@ async def cmd_clear(message: Message):
 async def handle_message(message: Message):
     """Handle all incoming messages"""
     # Skip bot commands
-    if message.text and message.text.startswith('/'):
+    if message.text and message.text.startswith("/"):
         return
 
     # Skip messages from bots
@@ -251,7 +279,9 @@ async def handle_message(message: Message):
         return
 
     chat_id = message.chat.id
-    username = message.from_user.username or message.from_user.first_name or "Неизвестно"
+    username = (
+        message.from_user.username or message.from_user.first_name or "Неизвестно"
+    )
     text = message.text or message.caption or "[Медиа сообщение]"
     timestamp = datetime.now()
 
@@ -283,7 +313,7 @@ async def main():
     await dp.start_polling(bot)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
