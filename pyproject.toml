@@ -16,3 +16,12 @@ dependencies = [
 dev = [
     "pre-commit>=4.5.0",
 ]
+
+[tool.isort]
+skip = [".gitignore", ".dockerignore", ".env", ".venv", "ENV/", "VENV/"]
+multi_line_output = 3
+include_trailing_comma = true
+line_length = 88
+skip_gitignore = true
+force_grid_wrap = 0
+use_parentheses = true

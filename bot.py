@@ -1,36 +1,34 @@
 import asyncio
 import re
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
 from typing import List
 
-import pymorphy3
-
 import nltk
-from nltk.corpus import stopwords
-from nltk.tag import pos_tag
-from nltk.tokenize import word_tokenize
-
+import pymorphy3
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types import Message
+from nltk.corpus import stopwords
+from nltk.tag import pos_tag
+from nltk.tokenize import word_tokenize
 
 from config import (
     BOT_TOKEN,
     DATETIME_FORMAT,
     DATETIME_FORMAT_SHORT,
-    TOP_USERS_COUNT,
-    TOP_NOUNS_COUNT,
-    SUMMARY_PERIOD_HOURS,
     NLTK_DATA_DIR,
+    SUMMARY_PERIOD_HOURS,
+    TOP_NOUNS_COUNT,
+    TOP_USERS_COUNT,
     logger,
 )
 from db import (
-    init_db,
     add_message,
-    get_messages_period,
     clean_old_messages,
     clear_chat_messages,
+    get_messages_period,
+    init_db,
 )
 
 # Language configuration - Russian only
