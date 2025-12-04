@@ -13,7 +13,11 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, LANGUAGE_CODE, TOP_USERS_COUNT, TOP_NOUNS_COUNT, SUMMARY_PERIOD_HOURS, NLTK_DATA_DIR, LANGUAGE, logger
+from config import BOT_TOKEN, DATETIME_FORMAT, DATETIME_FORMAT_SHORT, TOP_USERS_COUNT, TOP_NOUNS_COUNT, SUMMARY_PERIOD_HOURS, NLTK_DATA_DIR, logger
+
+# Language configuration - Russian only
+LANGUAGE = 'russian'
+LANGUAGE_CODE = LANGUAGE[0:3]
 
 # Set custom NLTK data directory
 nltk.data.path.insert(0, str(NLTK_DATA_DIR))
@@ -28,16 +32,10 @@ def _download_nltk_data():
         nltk.download('punkt_tab', quiet=True, download_dir=str(NLTK_DATA_DIR))
 
     try:
-        if LANGUAGE != 'english':
-            nltk.data.find(f'taggers/averaged_perceptron_tagger_{LANGUAGE_CODE}')
-        else:
-            nltk.data.find('taggers/averaged_perceptron_tagger')
+        nltk.data.find(f'taggers/averaged_perceptron_tagger_{LANGUAGE_CODE}')
     except LookupError:
-        logger.info(f"Downloading NLTK POS tagger to {NLTK_DATA_DIR}...")
-        if LANGUAGE != 'english':
-            nltk.download(f'averaged_perceptron_tagger_{LANGUAGE_CODE}')
-        else:
-            nltk.download('averaged_perceptron_tagger', quiet=True, download_dir=str(NLTK_DATA_DIR))
+        logger.info(f"Downloading NLTK POS tagger for {LANGUAGE} to {NLTK_DATA_DIR}...")
+        nltk.download(f'averaged_perceptron_tagger_{LANGUAGE_CODE}', quiet=True, download_dir=str(NLTK_DATA_DIR))
 
     try:
         nltk.data.find('corpora/stopwords')

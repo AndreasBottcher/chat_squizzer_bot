@@ -23,10 +23,6 @@ SUMMARY_PERIOD_HOURS = int(os.getenv('SUMMARY_PERIOD_HOURS', '24'))
 NLTK_DATA_DIR = Path(os.getenv('NLTK_DATA_DIR', 'nltk_data')).resolve()
 NLTK_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# NLTK language (e.g., 'english', 'russian')
-LANGUAGE = os.getenv('NLTK_LANGUAGE', 'english').lower()
-LANGUAGE_CODE = LANGUAGE[0:3]
-
 # Configure logging
 logging.basicConfig(
     level=LOG_LEVEL,
