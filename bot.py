@@ -70,7 +70,7 @@ dp = Dispatcher()
 def extract_nouns(text: str) -> List[str]:
     """Extract nouns from text using NLTK"""
     # Skip media messages
-    if text == "[Media message]":
+    if text == "[Медиа сообщение]":
         return []
 
     # Remove URLs and mentions
@@ -107,8 +107,7 @@ def get_top_nouns(messages: List[tuple]) -> List[tuple]:
 def summarize_basic(messages: List[tuple], period_hours: int) -> str:
     """Basic summarization without OpenAI API"""
     if not messages:
-        period_text = f"{period_hours} hours" if period_hours != 24 else "24 hours"
-        return f"No messages found in the last {period_text}."
+        return f"Сообщений за последние {period_hours}ч не найдено."
 
     total_messages = len(messages)
     unique_users = len(set(msg[1] for msg in messages))
@@ -133,25 +132,24 @@ def summarize_basic(messages: List[tuple], period_hours: int) -> str:
     # Get top nouns
     top_nouns = get_top_nouns(messages)
 
-    period_text = f"{period_hours} hours" if period_hours != 24 else "24 hours"
-    summary = f"📊 Summary of last {period_text}:\n\n"
-    summary += f"• Total messages: {total_messages}\n"
-    summary += f"• Active users: {unique_users}\n"
+    summary = f"📊 Сводка за последние {period_hours}ч:\n\n"
+    summary += f"• Всего сообщений: {total_messages}\n"
+    summary += f"• Активных пользователей: {unique_users}\n"
 
     # Add top N most active users
     if top_users:
-        summary += f"\n👥 Top {TOP_USERS_COUNT} most active users:\n"
+        summary += f"\n👥 Топ {TOP_USERS_COUNT} самых активных пользователей:\n"
         for i, (username, count) in enumerate(top_users, 1):
-            summary += f"  {i}. @{username}: {count} messages\n"
+            summary += f"  {i}. @{username}: {count} сообщений\n"
 
     # Add top nouns
     if top_nouns:
-        summary += f"\n📝 Top {TOP_NOUNS_COUNT} most used nouns:\n"
+        summary += f"\n📝 Топ {TOP_NOUNS_COUNT} самых используемых существительных (кол-во раз):\n"
         for i, (noun, count) in enumerate(top_nouns, 1):
-            summary += f"  {i}. {noun}: {count} times\n"
+            summary += f"  {i}. {noun}: {count}\n"
 
     if most_active_hour:
-        summary += f"\n• Most active hour: {most_active_hour.strftime(DATETIME_FORMAT_SHORT)}\n"
+        summary += f"\n• Самый активный час: {most_active_hour.strftime(DATETIME_FORMAT_SHORT)}\n"
 
     return summary
 
@@ -159,26 +157,24 @@ def summarize_basic(messages: List[tuple], period_hours: int) -> str:
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     """Handle /start command"""
-    period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
     await message.answer(
-        "👋 Hello! I'm a message summarizer bot.\n\n"
-        "I collect messages in this chat and can summarize them.\n"
-        f"Use /summary to get a summary of messages from the last {period_text}.\n"
-        "Use /help for more information."
+        "👋 Привет! Я бот для суммирования сообщений.\n\n"
+        "Я собираю сообщения в этом чате и могу их суммировать.\n"
+        f"Используйте /summary для получения сводки сообщений за последние {SUMMARY_PERIOD_HOURS}ч.\n"
+        "Используйте /help для получения дополнительной информации."
     )
 
 
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     """Handle /help command"""
-    period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
     await message.answer(
-        "📖 Bot Commands:\n\n"
-        "/start - Start the bot\n"
-        f"/summary - Get a summary of messages from the last {period_text}\n"
-        "/stats - Show statistics about stored messages\n"
-        "/clear - Clear stored messages (admin only)\n\n"
-        "The bot automatically collects messages in groups/channels where it's added."
+        "📖 Команды бота:\n\n"
+        "/start - Запустить бота\n"
+        f"/summary - Получить сводку сообщений за последние {SUMMARY_PERIOD_HOURS}ч\n"
+        "/stats - Показать статистику сохраненных сообщений\n"
+        "/clear - Очистить сохраненные сообщения (только для администраторов)\n\n"
+        "Бот автоматически собирает сообщения в группах/каналах, куда он добавлен."
     )
 
 
@@ -191,8 +187,7 @@ async def cmd_summary(message: Message):
     messages = await get_messages_period(chat_id, SUMMARY_PERIOD_HOURS)
 
     if not messages:
-        period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
-        await message.answer(f"No messages found in the last {period_text}.")
+        await message.answer(f"Сообщений за последние {SUMMARY_PERIOD_HOURS}ч не найдено.")
         return
 
     # Generate summary
@@ -210,20 +205,19 @@ async def cmd_stats(message: Message):
     messages = await get_messages_period(chat_id, SUMMARY_PERIOD_HOURS)
 
     if not messages:
-        await message.answer("No messages stored for this chat.")
+        await message.answer("Для этого чата не сохранено сообщений.")
         return
 
     unique_users = len(set(msg[1] for msg in messages))
     oldest_message = min(msg[0] for msg in messages)
     newest_message = max(msg[0] for msg in messages)
 
-    period_text = f"{SUMMARY_PERIOD_HOURS} hours" if SUMMARY_PERIOD_HOURS != 24 else "24 hours"
     stats = (
-        f"📈 Statistics for last {period_text}:\n\n"
-        f"• Total messages: {len(messages)}\n"
-        f"• Unique users: {unique_users}\n"
-        f"• Oldest message: {oldest_message.strftime(DATETIME_FORMAT)}\n"
-        f"• Newest message: {newest_message.strftime(DATETIME_FORMAT)}"
+        f"📈 Статистика за последние {SUMMARY_PERIOD_HOURS}ч:\n\n"
+        f"• Всего сообщений: {len(messages)}\n"
+        f"• Уникальных пользователей: {unique_users}\n"
+        f"• Самое старое сообщение: {oldest_message.strftime(DATETIME_FORMAT)}\n"
+        f"• Самое новое сообщение: {newest_message.strftime(DATETIME_FORMAT)}"
     )
 
     await message.answer(stats)
@@ -238,11 +232,11 @@ async def cmd_clear(message: Message):
     if message.chat.type in ['group', 'supergroup']:
         member = await bot.get_chat_member(chat_id, message.from_user.id)
         if member.status not in ['administrator', 'creator']:
-            await message.answer("❌ Only administrators can clear messages.")
+            await message.answer("❌ Только администраторы могут очищать сообщения.")
             return
 
     deleted_count = await clear_chat_messages(chat_id)
-    await message.answer(f"✅ Cleared {deleted_count} messages for this chat.")
+    await message.answer(f"✅ Очищено {deleted_count} сообщений для этого чата.")
 
 
 @dp.message()
@@ -257,8 +251,8 @@ async def handle_message(message: Message):
         return
 
     chat_id = message.chat.id
-    username = message.from_user.username or message.from_user.first_name or "Unknown"
-    text = message.text or message.caption or "[Media message]"
+    username = message.from_user.username or message.from_user.first_name or "Неизвестно"
+    text = message.text or message.caption or "[Медиа сообщение]"
     timestamp = datetime.now()
 
     # Store message in database
