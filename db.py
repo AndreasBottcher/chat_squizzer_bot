@@ -13,9 +13,10 @@ async def init_db():
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id INTEGER NOT NULL,
-                timestamp TEXT NOT NULL,
-                username TEXT NOT NULL,
-                text TEXT NOT NULL
+                user_id INTEGER,
+                message_id INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                timestamp TEXT NOT NULL
             )
         """)
         await db.execute("""
@@ -27,7 +28,11 @@ async def init_db():
 
 
 async def add_message(
-    chat_id: int, username: str, text: str, timestamp: Optional[datetime] = None
+    chat_id: int,
+    user_id: int,
+    message_id: int,
+    text: str,
+    timestamp: Optional[datetime] = None,
 ):
     """Add a message to the database"""
     if timestamp is None:
@@ -35,8 +40,8 @@ async def add_message(
 
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "INSERT INTO messages (chat_id, timestamp, username, text) VALUES (?, ?, ?, ?)",
-            (chat_id, timestamp.isoformat(), username, text),
+            "INSERT INTO messages (chat_id, timestamp, user_id, message_id, text) VALUES (?, ?, ?, ?, ?)",
+            (chat_id, timestamp.isoformat(), user_id, message_id, text),
         )
         await db.commit()
 
@@ -50,12 +55,17 @@ async def get_messages_period(
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
-            "SELECT timestamp, username, text FROM messages WHERE chat_id = ? AND timestamp > ? ORDER BY timestamp",
+            "SELECT timestamp, user_id, message_id, text FROM messages WHERE chat_id = ? AND timestamp > ? ORDER BY timestamp",
             (chat_id, cutoff_time.isoformat()),
         ) as cursor:
             rows = await cursor.fetchall()
             return [
-                (datetime.fromisoformat(row["timestamp"]), row["username"], row["text"])
+                (
+                    datetime.fromisoformat(row["timestamp"]),
+                    row["user_id"],
+                    row["message_id"],
+                    row["text"],
+                )
                 for row in rows
             ]
 

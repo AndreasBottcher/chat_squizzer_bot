@@ -14,7 +14,9 @@ if not BOT_TOKEN:
 DB_PATH = Path(os.getenv("DB_PATH", "messages.db"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", logging.INFO)
 
-DATETIME_FORMAT = os.getenv("DATETIME_FORMAT", "%d.%m.%Y %H:%M:%S")
+DATETIME_FORMAT = os.getenv(
+    "DATETIME_FORMAT", "%d.%m.%Y %H:%M:%S"
+)  # unused at the moment
 DATETIME_FORMAT_SHORT = os.getenv("DATETIME_FORMAT_SHORT", "%d.%m.%Y %H:%M")
 TOP_USERS_COUNT = int(os.getenv("TOP_USERS_COUNT", "3"))
 TOP_NOUNS_COUNT = int(os.getenv("TOP_NOUNS_COUNT", "5"))
