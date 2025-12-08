@@ -1,5 +1,5 @@
 import logging
-import os
+from os import getenv
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -8,22 +8,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Environment variables
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN environment variable is required")
-DB_PATH = Path(os.getenv("DB_PATH", "messages.db"))
-LOG_LEVEL = os.getenv("LOG_LEVEL", logging.INFO)
+DB_PATH = Path(getenv("DB_PATH", "messages.db"))
+LOG_LEVEL = getenv("LOG_LEVEL", logging.INFO)
 
-DATETIME_FORMAT = os.getenv(
-    "DATETIME_FORMAT", "%d.%m.%Y %H:%M:%S"
-)  # unused at the moment
-DATETIME_FORMAT_SHORT = os.getenv("DATETIME_FORMAT_SHORT", "%d.%m.%Y %H:%M")
-TOP_USERS_COUNT = int(os.getenv("TOP_USERS_COUNT", "3"))
-TOP_NOUNS_COUNT = int(os.getenv("TOP_NOUNS_COUNT", "5"))
-SUMMARY_PERIOD_HOURS = int(os.getenv("SUMMARY_PERIOD_HOURS", "24"))
+DATETIME_FORMAT = getenv("DATETIME_FORMAT", "%d.%m.%Y %H:%M:%S")  # unused at the moment
+DATETIME_FORMAT_SHORT = getenv("DATETIME_FORMAT_SHORT", "%d.%m.%Y %H:%M")
+TOP_USERS_COUNT = int(getenv("TOP_USERS_COUNT", "3"))
+TOP_NOUNS_COUNT = int(getenv("TOP_NOUNS_COUNT", "5"))
+SUMMARY_PERIOD_HOURS = int(getenv("SUMMARY_PERIOD_HOURS", "24"))
 
 # NLTK data directory
-NLTK_DATA_DIR = Path(os.getenv("NLTK_DATA_DIR", "nltk_data")).resolve()
+NLTK_DATA_DIR = Path(getenv("NLTK_DATA_DIR", "nltk_data")).resolve()
 NLTK_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Configure logging
